@@ -1,4 +1,4 @@
-function get_qa_cat(files, dir_output)
+function get_cat_qa(files, dir_output)
 % Function to read CAT report XML or .mat files and extract quality 
 % assurance measures, percentages, and grades into a csv file
 %% Inputs:
