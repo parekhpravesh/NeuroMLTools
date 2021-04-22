@@ -1,4 +1,4 @@
-function [feat_ranks, feat_ordered] = rank_features(data, classes, rank_method, ...
+function [rankedList, ranksOrdered] = rank_features(data, classes, rank_method, ...
                                                     std_method, out_method,     ...
                                                     out_thresh, out_handle)
 % Function to calculate rank of features given a method
@@ -39,9 +39,10 @@ function [feat_ranks, feat_ordered] = rank_features(data, classes, rank_method, 
 %                   * 'trim'
 % 
 %% Outputs:
-% feat_ranks:   a vector arranged in ascending order i.e. feat_ranks(1)
-%               will be the index of the feature which was ranked 1
-% feat_ordered: a vector corresponding to rank of each feature (in the
+% rankedList:   a vector arranged in ascending order of ranks i.e. 
+%               feat_ranks(1) will be the index of the feature which was 
+%               ranked 1
+% ranksOrdered: a vector corresponding to rank of each feature (in the
 %               order of column numbers of data i.e. feat_ordered(1) will 
 %               be the rank of feature 1)
 % 
@@ -258,8 +259,8 @@ switch rank_method
     case 'tstats'
         [~, ~, ~, stats]  = ttest2(data(classes==0,:), data(classes==1,:), 'Vartype', 'unequal', 'Tail', 'both');
         to_rank           = stats.tstat;
-        [~, feat_ranks]   = sort(abs(to_rank'), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,    'ascend');
+        [~, rankedList]   = sort(abs(to_rank'), 'descend');
+        [~, ranksOrdered] = sort(rankedList,    'ascend');
         
     case 'wilcoxon'
         numx     = sum(classes==0);
@@ -269,8 +270,8 @@ switch rank_method
                                    'method', 'approximate', 'tail', 'both');
             to_rank(feat,1) = stats.ranksum - (numx*(numx+1))/2;
         end
-        [~, feat_ranks]   = sort(abs(to_rank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,   'ascend');
+        [~, rankedList]   = sort(abs(to_rank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,   'ascend');
         
     case 'bhattacharyya'
         % Define matrices
@@ -305,48 +306,48 @@ switch rank_method
                 to_rank(feat,1) = NaN;
             end
         end
-        [~, feat_ranks]   = sort(abs(to_rank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,   'ascend');
+        [~, rankedList]   = sort(abs(to_rank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,   'ascend');
         
     case 'relieff'
-        [feat_ranks, to_rank] = relieff(data, classes, 10, 'method', 'classification');
+        [rankedList, to_rank] = relieff(data, classes, 10, 'method', 'classification');
         [~, b]                = sort(to_rank, 'descend');
-        [~, feat_ordered]     = sort(b,       'ascend');
-        feat_ranks            = feat_ranks';
-        feat_ordered          = feat_ordered';
+        [~, ranksOrdered]     = sort(b,       'ascend');
+        rankedList            = rankedList';
+        ranksOrdered          = ranksOrdered';
         
     case 'mrmr'
         try
-            feat_ranks    = mRMR_Spearman_alt(data, classes, num_features);
+            rankedList    = mRMR_Spearman_alt(data, classes, num_features);
         catch
             warning('Unable to find mRMR_Spearman_alt; trying mRMR_Spearman');
-            feat_ranks    = mRMR_Spearman(data, classes, num_features);
+            rankedList    = mRMR_Spearman(data, classes, num_features);
         end
-        feat_ranks        = feat_ranks';
-        [~, feat_ordered] = sort(feat_ranks, 'ascend');
+        rankedList        = rankedList';
+        [~, ranksOrdered] = sort(rankedList, 'ascend');
         
     case 'dmean'
         torank            = abs(mean(data(classes==0,:), 'omitnan') - ...
                                 mean(data(classes==1,:), 'omitnan'));
-        [~, feat_ranks]   = sort(torank',    'descend'); %#ok<UDIM>
-        [~, feat_ordered] = sort(feat_ranks, 'ascend');
+        [~, rankedList]   = sort(torank',    'descend'); %#ok<UDIM>
+        [~, ranksOrdered] = sort(rankedList, 'ascend');
         
     case 'dmedian'
         torank            = abs(median(data(classes==0,:), 'omitnan') - ...
                                 median(data(classes==1,:), 'omitnan'));
-        [~, feat_ranks]   = sort(torank',    'descend'); %#ok<UDIM>
-        [~, feat_ordered] = sort(feat_ranks, 'ascend');
+        [~, rankedList]   = sort(torank',    'descend'); %#ok<UDIM>
+        [~, ranksOrdered] = sort(rankedList, 'ascend');
         
     case 'dstd'
         torank            = abs(std(data(classes==0,:), [], 'omitnan') - ...
                                 std(data(classes==1,:), [], 'omitnan'));
-        [~, feat_ranks]   = sort(torank',    'descend'); %#ok<UDIM>
-        [~, feat_ordered] = sort(feat_ranks, 'ascend');
+        [~, rankedList]   = sort(torank',    'descend'); %#ok<UDIM>
+        [~, ranksOrdered] = sort(rankedList, 'ascend');
         
     case 'correlation'
         torank            = corr(data, classes);
-        [~, feat_ranks]   = sort(abs(torank),  'descend');
-        [~, feat_ordered] = sort(feat_ranks,   'ascend');
+        [~, rankedList]   = sort(abs(torank),  'descend');
+        [~, ranksOrdered] = sort(rankedList,   'ascend');
         
     case 'cohensd'
         term1             = mean(data(classes==0,:)) - mean(data(classes==1,:));
@@ -354,8 +355,8 @@ switch rank_method
                              (sum(classes==1)-1).*std(data(classes==1,:))) ./ ...
                              (length(classes) + 2);
         torank            = term1./term2;
-        [~, feat_ranks]   = sort(abs(torank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,  'ascend');
+        [~, rankedList]   = sort(abs(torank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,  'ascend');
         
     case 'hedgesg'
         term1             = mean(data(classes==0,:)) - mean(data(classes==1,:));
@@ -364,15 +365,15 @@ switch rank_method
                              (length(classes) + 2);
         factor            = 1 - (3/(4*length(classes)-9));
         torank            = factor .* term1./term2;
-        [~, feat_ranks]   = sort(abs(torank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,  'ascend');
+        [~, rankedList]   = sort(abs(torank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,  'ascend');
         
     case 'glassd'
         term1             = mean(data(classes==0,:)) - mean(data(classes==1,:));
         term2             = std(data(classes==0,:));
         torank            = term1./term2;
-        [~, feat_ranks]   = sort(abs(torank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,  'ascend');
+        [~, rankedList]   = sort(abs(torank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,  'ascend');
         
     case 'silhouetteman'        
         % Number of observations in each class
@@ -412,8 +413,8 @@ switch rank_method
         torank = mean([sil_0; sil_1])';
         
         % Sort in descending order
-        [~, feat_ranks]   = sort(abs(torank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,  'ascend');
+        [~, rankedList]   = sort(abs(torank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,  'ascend');
         
     case 'silhouetteeuc'        
         % Number of observations in each class
@@ -453,8 +454,8 @@ switch rank_method
         torank = mean([sil_0; sil_1])';
         
         % Sort in descending order
-        [~, feat_ranks]   = sort(abs(torank), 'descend');
-        [~, feat_ordered] = sort(feat_ranks,  'ascend');                
+        [~, rankedList]   = sort(abs(torank), 'descend');
+        [~, ranksOrdered] = sort(rankedList,  'ascend');                
                 
     otherwise
         error(['Unknown ranking method specified: ', rank_method]);
