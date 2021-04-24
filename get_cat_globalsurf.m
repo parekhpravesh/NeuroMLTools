@@ -135,120 +135,171 @@ else
     end
 end
 
-%% Compile measures
-globalSurf = cell(num_surfaces, 37);
+%% Handle Toro's gyrification indices and initialize
+% Work out the number of Toro's gyrificiation indices that might be present
+% using the first subject
+tmp_Toro = dir(strrep(surfaces{1}, 'lh.pbt.', 'lh.toroGI*.'));
+if isempty(tmp_Toro)
+    doToro = false;
+else
+    doToro        = true;
+    numToro       = length(tmp_Toro);
+    Toroprefixes  = cell(numToro,1);
+    [~, tmp_name] = fileparts(regexprep(strrep(surfaces{1}, 'lh.pbt.', ''), ...
+                             {'_T1w_RAS', '_T1w'}, ''));
+    for Toro = 1:numToro
+        Toroprefixes{Toro,1} = regexprep(tmp_Toro(Toro).name, {tmp_name, ...
+                               'lh.toroGI', 'mm.', '_T1w_RAS', '_T1w'}, '');
+    end
+end
 
+if doToro
+    var_names = {'SubjectID';                                              ...
+                  'Mean_PBT';                    'SD_PBT';                 ...
+                  'Mean_Thickness';              'SD_Thickness';           ...
+                  'Mean_Gyrification';           'SD_Gyrification';        ...
+                  'Mean_Depth';                  'SD_Depth';               ...
+                  'Mean_FractalDimension';       'SD_FractalDimension'};
+              
+    for Toro = 1:numToro
+        var_names{length(var_names)+1,1} = ['Mean_ToroGI', Toroprefixes{Toro}, 'mm'];
+        var_names{length(var_names)+1,1} = ['SD_ToroGI',   Toroprefixes{Toro}, 'mm'];
+    end
+    
+    var_names = [var_names;                                             ...
+                {'Mean_LH_PBT';               'SD_LH_PBT';              ...
+                'Mean_RH_PBT';                'SD_RH_PBT';              ...
+                'Mean_LH_Thickness';          'SD_LH_Thickness';        ...
+                'Mean_RH_Thickness';          'SD_RH_Thickness';        ...
+                'Mean_LH_Gyrification';       'SD_LH_Gyrification';     ...
+                'Mean_RH_Gyrification';       'SD_RH_Gyrification';     ...
+                'Mean_LH_Depth';              'SD_LH_Depth';            ...
+                'Mean_RH_Depth';              'SD_RH_Depth';            ...
+                'Mean_LH_FractalDimension';   'SD_LH_FractalDimension'; ...
+                'Mean_RH_FractalDimension';   'SD_RH_FractalDimension'}];
+            
+    for Toro = 1:numToro
+        var_names{length(var_names)+1,1} = ['Mean_LH_ToroGI', Toroprefixes{Toro}, 'mm'];
+        var_names{length(var_names)+1,1} = ['SD_LH_ToroGI',   Toroprefixes{Toro}, 'mm'];
+        var_names{length(var_names)+1,1} = ['Mean_RH_ToroGI', Toroprefixes{Toro}, 'mm'];
+        var_names{length(var_names)+1,1} = ['SD_RH_ToroGI',   Toroprefixes{Toro}, 'mm'];        
+    end
+    
+else
+    var_names = {'SubjectID';                                             ...
+                 'Mean_PBT';                    'SD_PBT';                 ...
+                 'Mean_Thickness';              'SD_Thickness';           ...
+                 'Mean_Gyrification';           'SD_Gyrification';        ...
+                 'Mean_Depth';                  'SD_Depth';               ...
+                 'Mean_FractalDimension';       'SD_FractalDimension';    ...
+                 'Mean_LH_PBT';                 'SD_LH_PBT';              ...
+                 'Mean_RH_PBT';                 'SD_RH_PBT';              ...
+                 'Mean_LH_Thickness';           'SD_LH_Thickness';        ...
+                 'Mean_RH_Thickness';           'SD_RH_Thickness';        ...
+                 'Mean_LH_Gyrification';        'SD_LH_Gyrification';     ...
+                 'Mean_RH_Gyrification';        'SD_RH_Gyrification';     ...
+                 'Mean_LH_Depth';               'SD_LH_Depth';            ...
+                 'Mean_RH_Depth';               'SD_RH_Depth';            ...
+                 'Mean_LH_FractalDimension';    'SD_LH_FractalDimension'; ...
+                 'Mean_RH_FractalDimension';    'SD_RH_FractalDimension'};
+end
+
+% Initialize
+globalSurf = cell(num_surfaces, 31+(numToro*6));
+globalSurf = cell2table(globalSurf, 'VariableNames', var_names);
+
+%% Compile measures
 % Loop over each subject file and summarize values
 for subjs  = 1:num_surfaces
         
     % Get subject ID
-    [~, tmp_name]       = fileparts(regexprep(strrep(surfaces{subjs}, 'lh.pbt.', ''), {'_T1w_RAS', '_T1w'}, ''));
-    globalSurf{subjs,1} = tmp_name;
+    [~, tmp_name]               = fileparts(regexprep(strrep(surfaces{subjs}, 'lh.pbt.', ''), {'_T1w_RAS', '_T1w'}, ''));
+    globalSurf.SubjectID{subjs} = tmp_name;
     
     % Get PBT info
-    dat_LH                  = cat_io_FreeSurfer('read_surf_data', surfaces{subjs});
-    dat_RH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.pbt.'));
-    globalSurf{subjs, 2}    = mean([dat_LH; dat_RH]);
-    globalSurf{subjs, 3}    = std([dat_LH;  dat_RH]);
-    globalSurf{subjs, 14}   = mean(dat_LH);
-    globalSurf{subjs, 15}   = std(dat_LH);
-    globalSurf{subjs, 16}   = mean(dat_RH);
-    globalSurf{subjs, 17}   = std(dat_RH);
+    dat_LH                        = cat_io_FreeSurfer('read_surf_data', surfaces{subjs});
+    dat_RH                        = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.pbt.'));
+    globalSurf.Mean_PBT{subjs}    = mean([dat_LH; dat_RH]);
+    globalSurf.SD_PBT{subjs}      = std([dat_LH;  dat_RH]);
+    globalSurf.Mean_LH_PBT{subjs} = mean(dat_LH);
+    globalSurf.SD_LH_PBT{subjs}   = std(dat_LH);
+    globalSurf.Mean_RH_PBT{subjs} = mean(dat_RH);
+    globalSurf.SD_RH_PBT{subjs}   = std(dat_RH);
     
     % Get cortical thickness
     try
-        dat_LH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.thickness.'));
-        dat_RH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.thickness.'));
-        globalSurf{subjs, 4}    = mean([dat_LH; dat_RH]);
-        globalSurf{subjs, 5}    = std([dat_LH;  dat_RH]);
-        globalSurf{subjs, 18}   = mean(dat_LH);
-        globalSurf{subjs, 19}   = std(dat_LH);
-        globalSurf{subjs, 20}   = mean(dat_RH);
-        globalSurf{subjs, 21}   = std(dat_RH);
+        dat_LH                              = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.thickness.'));
+        dat_RH                              = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.thickness.'));
+        globalSurf.Mean_Thickness{subjs}    = mean([dat_LH; dat_RH]);
+        globalSurf.SD_Thickness{subjs}      = std([dat_LH;  dat_RH]);
+        globalSurf.Mean_LH_Thickness{subjs} = mean(dat_LH);
+        globalSurf.SD_LH_Thickness{subjs}   = std(dat_LH);
+        globalSurf.Mean_RH_Thickness{subjs} = mean(dat_RH);
+        globalSurf.SD_RH_Thickness{subjs}   = std(dat_RH);
     catch
         warning(['Cortical thickness file not found for: ', tmp_name]);
     end
     
     % Get gyrification
     try
-        dat_LH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.gyrification.'));
-        dat_RH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.gyrification.'));
-        globalSurf{subjs, 6}    = mean([dat_LH; dat_RH]);
-        globalSurf{subjs, 7}    = std([dat_LH;  dat_RH]);
-        globalSurf{subjs, 22}   = mean(dat_LH);
-        globalSurf{subjs, 23}   = std(dat_LH);
-        globalSurf{subjs, 24}   = mean(dat_RH);
-        globalSurf{subjs, 25}   = std(dat_RH);
+        dat_LH                                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.gyrification.'));
+        dat_RH                                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.gyrification.'));
+        globalSurf.Mean_Gyrification{subjs}     = mean([dat_LH; dat_RH]);
+        globalSurf.SD_Gyrification{subjs}       = std([dat_LH;  dat_RH]);
+        globalSurf.Mean_LH_Gyrification{subjs}  = mean(dat_LH);
+        globalSurf.SD_LH_Gyrification{subjs}    = std(dat_LH);
+        globalSurf.Mean_RH_Gyrification{subjs}  = mean(dat_RH);
+        globalSurf.SD_RH_Gyrification{subjs}    = std(dat_RH);
     catch
         warning(['Gyrification file not found for: ', tmp_name]);
     end
     
     % Get sulcal depth
     try
-        dat_LH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.depth.'));
-        dat_RH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.depth.'));
-        globalSurf{subjs, 8}    = mean([dat_LH; dat_RH]);
-        globalSurf{subjs, 9}    = std([dat_LH;  dat_RH]);
-        globalSurf{subjs, 26}   = mean(dat_LH);
-        globalSurf{subjs, 27}   = std(dat_LH);
-        globalSurf{subjs, 28}   = mean(dat_RH);
-        globalSurf{subjs, 29}   = std(dat_RH);
+        dat_LH                          = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.depth.'));
+        dat_RH                          = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.depth.'));
+        globalSurf.Mean_Depth{subjs}    = mean([dat_LH; dat_RH]);
+        globalSurf.SD_Depth{subjs}      = std([dat_LH;  dat_RH]);
+        globalSurf.Mean_LH_Depth{subjs} = mean(dat_LH);
+        globalSurf.SD_LH_Depth{subjs}   = std(dat_LH);
+        globalSurf.Mean_RH_Depth{subjs} = mean(dat_RH);
+        globalSurf.SD_RH_Depth{subjs}   = std(dat_RH);
     catch
         warning(['Depth file not found for: ', tmp_name]);
     end
     
     % Get fractal dimension
     try
-        dat_LH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.fractaldimension.'));
-        dat_RH                  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.fractaldimension.'));
-        globalSurf{subjs, 10}   = mean([dat_LH; dat_RH]);
-        globalSurf{subjs, 11}   = std([dat_LH;  dat_RH]);
-        globalSurf{subjs, 30}   = mean(dat_LH);
-        globalSurf{subjs, 31}   = std(dat_LH);
-        globalSurf{subjs, 32}   = mean(dat_RH);
-        globalSurf{subjs, 33}   = std(dat_RH);
+        dat_LH                                      = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'lh.fractaldimension.'));
+        dat_RH                                      = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', 'rh.fractaldimension.'));
+        globalSurf.Mean_FractalDimension{subjs}     = mean([dat_LH; dat_RH]);
+        globalSurf.SD_FractalDimension{subjs}       = std([dat_LH;  dat_RH]);
+        globalSurf.Mean_LH_FractalDimension{subjs}  = mean(dat_LH);
+        globalSurf.SD_LH_FractalDimension{subjs}    = std(dat_LH);
+        globalSurf.Mean_RH_FractalDimension{subjs}  = mean(dat_RH);
+        globalSurf.SD_RH_FractalDimension{subjs}    = std(dat_RH);
     catch
         warning(['Depth file not found for: ', tmp_name]);
     end    
     
-    % Get Toro's gyrification index
-    try
-        tmp_LH                  = dir(fullfile(fileparts(surfaces{subjs}), ['lh.toroGI*.', tmp_name, '*']));
-        tmp_RH                  = dir(fullfile(fileparts(surfaces{subjs}), ['rh.toroGI*.', tmp_name, '*']));
-        dat_LH                  = cat_io_FreeSurfer('read_surf_data', fullfile(fileparts(surfaces{subjs}), tmp_LH(1).name));
-        dat_RH                  = cat_io_FreeSurfer('read_surf_data', fullfile(fileparts(surfaces{subjs}), tmp_RH(1).name));
-        globalSurf{subjs, 12}   = mean([dat_LH; dat_RH]);
-        globalSurf{subjs, 13}   = std([dat_LH;  dat_RH]);
-        globalSurf{subjs, 34}   = mean(dat_LH);
-        globalSurf{subjs, 35}   = std(dat_LH);
-        globalSurf{subjs, 36}   = mean(dat_RH);
-        globalSurf{subjs, 37}   = std(dat_RH);
-    catch
-        warning(['Toro GI files not found for: ', tmp_name]);
-    end        
+    % Get Toro's gyrification indices
+    if doToro
+        for Toro = 1:numToro
+            try
+                dat_LH  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', ['lh.toroGI', Toroprefixes{Toro}, 'mm.']));
+                dat_RH  = cat_io_FreeSurfer('read_surf_data', strrep(surfaces{subjs}, 'lh.pbt.', ['rh.toroGI', Toroprefixes{Toro}, 'mm.']));        
+                globalSurf.(['Mean_ToroGI',     Toroprefixes{Toro}, 'mm']){subjs} = mean([dat_LH; dat_RH]);
+                globalSurf.(['SD_ToroGI',       Toroprefixes{Toro}, 'mm']){subjs} = std([dat_LH;  dat_RH]);
+                globalSurf.(['Mean_LH_ToroGI',  Toroprefixes{Toro}, 'mm']){subjs} = mean(dat_LH);
+                globalSurf.(['SD_LH_ToroGI',    Toroprefixes{Toro}, 'mm']){subjs} = std(dat_LH);
+                globalSurf.(['Mean_RH_ToroGI',  Toroprefixes{Toro}, 'mm']){subjs} = mean(dat_RH);
+                globalSurf.(['SD_RH_ToroGI',    Toroprefixes{Toro}, 'mm']){subjs} = std(dat_RH);
+            catch
+                warning(['Toro GI ', Toroprefixes{Toro}, ' file not found for: ', tmp_name]);
+            end
+        end
+    end
 end
-
-% Put together as a table
-var_names = {'SubjectID';                                               ...
-             'Mean_PBT';                    'SD_PBT';                   ...
-             'Mean_Thickness';              'SD_Thickness';             ...
-             'Mean_Gyrification';           'SD_Gyrification';          ...
-             'Mean_Depth';                  'SD_Depth';                 ...
-             'Mean_FractalDimension';       'SD_FractalDimension';      ...
-             'Mean_ToroGI';                 'SD_ToroGI';                ...
-             'Mean_LH_PBT';                 'SD_LH_PBT';                ...
-             'Mean_RH_PBT';                 'SD_RH_PBT';                ...
-             'Mean_LH_Thickness';           'SD_LH_Thickness';          ...
-             'Mean_RH_Thickness';           'SD_RH_Thickness';          ...
-             'Mean_LH_Gyrification';        'SD_LH_Gyrification';       ...
-             'Mean_RH_Gyrification';        'SD_RH_Gyrification';       ...
-             'Mean_LH_Depth';               'SD_LH_Depth';              ...
-             'Mean_RH_Depth';               'SD_RH_Depth';              ...
-             'Mean_LH_FractalDimension';    'SD_LH_FractalDimension';   ...
-             'Mean_RH_FractalDimension';    'SD_RH_FractalDimension';   ...
-             'Mean_LH_ToroGI';              'SD_LH_ToroGI';             ...
-             'Mean_RH_ToroGI';              'SD_RH_ToroGI'};          
-globalSurf = cell2table(globalSurf, 'VariableNames', var_names);
 
 % Write table, if required
 if toWrite
