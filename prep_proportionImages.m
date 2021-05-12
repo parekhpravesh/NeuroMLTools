@@ -1,6 +1,6 @@
-function prep_propGMImages(mwp1, mask, dir_output)
-% Function to create proportion of gray matter images given a directory 
-% containing CAT mwp[1-3] images
+function prep_proportionImages(mwp1, mask, dir_output)
+% Function to create proportion of gray matter, white matter, and 
+% cerebrospinal fluid images given a set of CAT mwp[1-3] images
 %% Inputs
 % mwp1:             full path to a location where mwp[1-3]*.nii files
 %                   (created by CAT) are saved OR cell type with each row
@@ -12,11 +12,15 @@ function prep_propGMImages(mwp1, mask, dir_output)
 % dir_output:       fullpath to a location where results will be saved
 % 
 %% Outputs:
-% Proportion of GM images are written in dir_output for each subject
+% Proportion of GM, WM, and CSF images are written in dir_output
 % 
 %% Notes:
 % For each voxel, proportion of GM is defined as:
 % GM./(GM + WM + CSF) at that voxel
+% 
+% Similarly, proportion of WM and CSF are defined as:
+% WM./(GM + WM + CSF) at that voxel
+% CSF./(GM + WM + CSF) at that voxel
 % 
 % Assumes that mwp* for a given subject are all present in the same folder
 % 
@@ -152,17 +156,26 @@ for images = 1:numImages
     end
     
     % Calculate proportion image
-    propGM = dat_mwp1./(dat_mwp1 + dat_mwp2 + dat_mwp3);
+    denom   = dat_mwp1 + dat_mwp2 + dat_mwp3;
+    propGM  = dat_mwp1./denom;
+    propWM  = dat_mwp2./denom;
+    propCSF = dat_mwp3./denom;
     
     % Apply mask, if necessary
     if doMask
-        propGM = propGM.*datMask;
+        propGM  = propGM.*datMask;
+        propWM  = propWM.*datMask;
+        propCSF = propCSF.*datMask;
     end
     
-    % Edit header
+    % Edit header and write out
     [~, tmpName]   = fileparts(mwp1{images});
     vol_mwp1.fname = fullfile(dir_output, ['PropGM_', tmpName, '.nii']);
+    spm_write_vol(vol_mwp1, propGM);
     
-    % Write out
-    spm_write_vol(vol_mwp1, propGM);           
+    vol_mwp1.fname = fullfile(dir_output, ['PropWM_', tmpName, '.nii']);
+    spm_write_vol(vol_mwp1, propWM);
+    
+    vol_mwp1.fname = fullfile(dir_output, ['PropCSF_', tmpName, '.nii']);
+    spm_write_vol(vol_mwp1, propCSF);   
 end
