@@ -107,7 +107,7 @@ for report = 1:num_reports
 
     tmp                 = S.subjectmeasures.vol_rel_CGW*100;
     rel_vol(report,1:4) = tmp([2,3,1,4]);
-    abs_vol(report,1:4) = S.subjectmeasures.vol_abs_CGW([2,1,3,4]);
+    abs_vol(report,1:4) = S.subjectmeasures.vol_abs_CGW([2,3,1,4]);
     TIV(report,1)       = S.subjectmeasures.vol_TIV;
 end
 
