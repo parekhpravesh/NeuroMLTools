@@ -89,6 +89,7 @@ abs_vol    = zeros(num_reports,4);
 TIV        = zeros(num_reports,1);
 header     = {'SubjectID'; 'GM'; 'WM'; 'CSF'; 'WMH'; 'RelGM'; 'RelWM'; 'RelCSF'; 'RelWMH'; 'TIV'};
 globalVols = cell(num_reports, length(header));
+locError   = [];
 
 % Loop over each mat file and get values
 for report = 1:num_reports
@@ -102,6 +103,7 @@ for report = 1:num_reports
     % Skip subject if there was an error
     if isfield(S, 'error')
         warning(['Error in report: ', reports{report}, '; skipping this report']);
+        locError = [locError; report]; %#ok<AGROW>
         continue;
     end    
 
@@ -116,6 +118,9 @@ globalVols(:,2:5)    = num2cell(abs_vol);
 globalVols(:,6:9)    = num2cell(rel_vol);
 globalVols(:,10)     = num2cell(TIV);
 globalVols           = cell2table(globalVols, 'VariableNames', header);
+
+% Remove rows that had errors
+globalVols(locError,:) = [];
 
 % Write table, if required
 if toWrite
