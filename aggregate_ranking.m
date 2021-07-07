@@ -262,7 +262,7 @@ switch aggregation_method
         end
         
         % Randomly reorder the rank_mat columns
-        rank_mat = rank_mat(:,randperm(4,4));
+        rank_mat = rank_mat(:,randperm(num_methods,num_methods));
         
         % Initialize
         ranks     = [];
